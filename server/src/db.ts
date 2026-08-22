@@ -14,13 +14,20 @@ db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
 export function initSchema() {
+  // 1. 建立基礎資料表
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       user_id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS otps (
+      email TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS products (
@@ -57,6 +64,17 @@ export function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(created_at);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   `)
+
+  // 2. 欄位一致性防呆：若 users 表存在但缺少 password_hash，自動補齊
+  try {
+    const userColumns = db.prepare(`PRAGMA table_info(users)`).all().map((c: any) => c.name)
+    if (!userColumns.includes('password_hash')) {
+      console.log('🔧 [DB] 偵測到 users 表缺少 password_hash，正在自動補上欄位...')
+      db.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT;`)
+    }
+  } catch (err) {
+    console.error('❌ [DB] 檢查 users 欄位失敗:', err)
+  }
 }
 
 initSchema()
