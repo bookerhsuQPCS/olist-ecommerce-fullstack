@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cartStore'
+import { fetchRecommendations as apiFetchRecommendations } from '../services/api'
 import type { Product } from '../types'
 
 const router = useRouter()
@@ -26,17 +27,10 @@ async function fetchRecommendations() {
     const cartProductIds = cartStore.items.map(item => item.product.product_id)
     const cartCategoryIds = Array.from(new Set(cartStore.items.map(item => item.product.category_id)))
 
-    const res = await fetch('http://localhost:3001/api/products/recommendations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cartProductIds, cartCategoryIds })
-    })
-
-    if (res.ok) {
-      recommendedProducts.value = await res.json()
-    }
-  } catch (err) {
-    console.error('加載推薦商品失敗', err)
+    // 調用 api.ts 封裝函式，統一走 3002 與安全錯誤處理
+    recommendedProducts.value = await apiFetchRecommendations(cartProductIds, cartCategoryIds)
+  } catch {
+    recommendedProducts.value = []
   } finally {
     loadingRecs.value = false
   }

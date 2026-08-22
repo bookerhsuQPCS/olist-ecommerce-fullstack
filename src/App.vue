@@ -42,9 +42,11 @@ function handleLogout() {
           </router-link>
 
           <!-- 僅在符合白名單時顯示 BI 儀表板 -->
+          <!--
           <router-link v-if="authStore.isAdmin" to="/dashboard" class="nav-link admin-link">
             <span>📊 BI 儀表板</span>
           </router-link>
+          -->
 
           <!-- 會員登入 / 登出狀態 -->
           <div v-if="authStore.isAuthenticated" class="auth-box">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cartStore'
 import { fetchProductById } from '../services/api'
@@ -14,6 +14,28 @@ const quantity = ref(1)
 const loading = ref(true)
 const errorMessage = ref('')
 const addedToast = ref(false)
+
+// 安全解析評論列表 (相容 reviews 陣列與 reviews_json 字串)
+const reviewsList = computed(() => {
+  if (!product.value) return []
+  if (Array.isArray((product.value as any).reviews)) {
+    return (product.value as any).reviews
+  }
+  if ((product.value as any).reviews_json) {
+    try {
+      return JSON.parse((product.value as any).reviews_json)
+    } catch {
+      return []
+    }
+  }
+  return []
+})
+
+// 圖片載入失敗時的預設回退圖片
+function handleImgError(e: Event) {
+  const target = e.target as HTMLImageElement
+  target.src = 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=600&q=80'
+}
 
 async function loadDetail() {
   const id = route.params.id as string
@@ -60,7 +82,7 @@ onMounted(() => {
 
 <template>
   <div class="detail-page-container">
-    <!-- 返回導航 -->
+    <!-- 返回導覽 -->
     <div class="back-bar">
       <router-link to="/" class="back-link">
         <span class="arrow">←</span>
@@ -88,11 +110,16 @@ onMounted(() => {
         <!-- 左側：商品大圖 -->
         <div class="gallery-wrapper">
           <div class="image-box">
-            <img :src="product.image_url" :alt="product.title" class="product-img" />
+            <img
+              :src="product.image_url"
+              :alt="product.title"
+              class="product-img"
+              @error="handleImgError"
+            />
           </div>
         </div>
 
-        <!-- 右側：商品核心購買資訊 -->
+        <!-- 右側：商品購買資訊 -->
         <div class="info-wrapper">
           <div class="category-badge">
             🏷️ {{ product.category_name_en }} ({{ product.category_id }})
@@ -101,17 +128,17 @@ onMounted(() => {
           <h1 class="product-title">{{ product.title }}</h1>
 
           <div class="rating-bar">
-            <span class="rating-star">⭐ {{ product.rating_avg.toFixed(1) }}</span>
+            <span class="rating-star">⭐ {{ (product.rating_avg || 5.0).toFixed(1) }}</span>
             <span class="rating-divider">・</span>
-            <span class="rating-text">{{ product.review_count }} 則買家真實評價</span>
+            <span class="rating-text">{{ product.review_count || 0 }} 則買家真實評價</span>
           </div>
 
-          <!-- 價格卡片 -->
+          <!-- 價格區塊 (以 6.5 匯率折合 TWD) -->
           <div class="price-box">
-            <span class="price-tag">巴西直送限時特惠</span>
+            <span class="price-tag">直送限時特惠</span>
             <div class="price-num">
-              <span class="currency">R$</span>
-              <span>{{ product.price.toFixed(2) }}</span>
+              <span class="currency">NT$</span>
+              <span>{{ Math.round(product.price * 6.5) }}</span>
             </div>
           </div>
 
@@ -122,23 +149,23 @@ onMounted(() => {
           <div class="specs-box">
             <div class="spec-cell">
               <span class="spec-label">商品重量</span>
-              <span class="spec-value">{{ product.weight_g }} g</span>
+              <span class="spec-value">{{ product.weight_g || 500 }} g</span>
             </div>
             <div class="spec-cell">
               <span class="spec-label">長度</span>
-              <span class="spec-value">{{ product.length_cm }} cm</span>
+              <span class="spec-value">{{ product.length_cm || 20 }} cm</span>
             </div>
             <div class="spec-cell">
               <span class="spec-label">高度</span>
-              <span class="spec-value">{{ product.height_cm }} cm</span>
+              <span class="spec-value">{{ product.height_cm || 10 }} cm</span>
             </div>
             <div class="spec-cell">
               <span class="spec-label">寬度</span>
-              <span class="spec-value">{{ product.width_cm }} cm</span>
+              <span class="spec-value">{{ product.width_cm || 15 }} cm</span>
             </div>
           </div>
 
-          <!-- 購買控制列 -->
+          <!-- 數量調整與購買操作 -->
           <div class="action-panel">
             <div class="qty-control">
               <button class="qty-btn" @click="updateQuantity(-1)">-</button>
@@ -154,29 +181,30 @@ onMounted(() => {
             </button>
           </div>
 
-          <!-- 成功提示 -->
+          <!-- 加入成功提示 -->
           <div v-if="addedToast" class="toast-success">
             ✓ 已成功加入購物車！可隨時至右上角結帳
           </div>
         </div>
       </div>
 
-      <!-- 底部顧客評論 -->
+      <!-- 顧客評價區塊 -->
       <section class="reviews-section">
         <h2 class="section-title">
           <span>💬</span>
-          <span>顧客評價與回饋 ({{ product.reviews.length }})</span>
+          <span>顧客評價與回饋 ({{ reviewsList.length }})</span>
         </h2>
 
-        <div class="reviews-grid">
-          <div v-for="rev in product.reviews" :key="rev.review_id" class="review-item">
+        <div v-if="reviewsList.length > 0" class="reviews-grid">
+          <div v-for="rev in reviewsList" :key="rev.review_id" class="review-item">
             <div class="review-top">
-              <span class="stars">{{ '★'.repeat(rev.score) }}{{ '☆'.repeat(5 - rev.score) }}</span>
+              <span class="stars">{{ '★'.repeat(rev.score || 5) }}{{ '☆'.repeat(5 - (rev.score || 5)) }}</span>
               <span class="date">{{ rev.date }}</span>
             </div>
             <p class="comment">{{ rev.comment }}</p>
           </div>
         </div>
+        <p v-else class="no-reviews">目前尚無顧客文字評價</p>
       </section>
     </div>
   </div>
@@ -198,6 +226,7 @@ onMounted(() => {
   color: var(--coupang-blue, #0074e9);
   font-weight: 700;
   font-size: 14px;
+  text-decoration: none;
 }
 
 .back-link:hover {
@@ -222,7 +251,6 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
-/* 主版面：左右雙欄 */
 .product-showcase-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -235,7 +263,6 @@ onMounted(() => {
   margin-bottom: 32px;
 }
 
-/* 左側圖片區 */
 .gallery-wrapper {
   display: flex;
   justify-content: center;
@@ -261,7 +288,6 @@ onMounted(() => {
   object-fit: cover;
 }
 
-/* 右側資訊區 */
 .info-wrapper {
   display: flex;
   flex-direction: column;
@@ -340,7 +366,6 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-/* 規格網格 */
 .specs-box {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -369,7 +394,6 @@ onMounted(() => {
   color: var(--text-primary, #111827);
 }
 
-/* 購買控制列 */
 .action-panel {
   display: flex;
   align-items: center;
@@ -428,7 +452,6 @@ onMounted(() => {
   border: 1px solid #a7f3d0;
 }
 
-/* 評論區塊 */
 .reviews-section {
   background: #ffffff;
   border: 1px solid var(--border-color, #e5e7eb);
@@ -483,7 +506,11 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-/* RWD 斷點 */
+.no-reviews {
+  color: var(--text-muted, #9ca3af);
+  font-size: 13px;
+}
+
 @media (max-width: 840px) {
   .product-showcase-grid {
     grid-template-columns: 1fr;

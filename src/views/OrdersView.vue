@@ -8,12 +8,36 @@ const orders = ref<any[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
+// 圖片載入失敗回退
+function handleImgError(e: Event) {
+  const target = e.target as HTMLImageElement
+  target.src = 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=600&q=80'
+}
+
+// 安全解析訂單商品明細
+function parseOrderItems(order: any) {
+  if (Array.isArray(order.items)) return order.items
+  if (order.items_json) {
+    try {
+      return JSON.parse(order.items_json)
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 async function loadOrders() {
   if (!authStore.currentUser?.user_id) return
   loading.value = true
   errorMessage.value = ''
   try {
-    orders.value = await fetchUserOrders(authStore.currentUser.user_id)
+    const rawOrders = await fetchUserOrders(authStore.currentUser.user_id)
+    // 遍歷訂單，自動將 items_json 解析為 items 供模板使用
+    orders.value = (rawOrders || []).map(order => ({
+      ...order,
+      items: parseOrderItems(order)
+    }))
   } catch (err: any) {
     errorMessage.value = err.message || '查詢訂單失敗'
   } finally {
@@ -68,16 +92,33 @@ onMounted(() => {
         </div>
 
         <div class="order-body">
+          <!-- 購買商品列表 -->
           <div class="order-items">
-            <div v-for="item in order.items" :key="item.product.product_id" class="order-item-row">
-              <img :src="item.product.image_url" :alt="item.product.title" class="item-img" />
+            <div
+              v-for="item in order.items"
+              :key="item.product?.product_id || item.product_id"
+              class="order-item-row"
+            >
+              <img
+                :src="item.product?.image_url || item.image_url"
+                :alt="item.product?.title || item.title"
+                class="item-img"
+                @error="handleImgError"
+              />
               <div class="item-info">
-                <div class="item-name">{{ item.product.title }}</div>
-                <div class="item-sub">NT$ {{ Math.round(item.product.price * 6.5) }} × {{ item.quantity }}</div>
+                <div class="item-name">{{ item.product?.title || item.title || '嚴選特惠商品' }}</div>
+                <div class="item-sub">
+                  NT$ {{ item.product?.price_twd || Math.round((item.product?.price || item.price || 0) * 6.5) }} × {{ item.quantity }}
+                </div>
               </div>
+            </div>
+
+            <div v-if="order.items.length === 0" class="no-items-tip">
+              （此筆訂單無商品明細紀錄）
             </div>
           </div>
 
+          <!-- 訂單結算摘要 -->
           <div class="order-summary-box">
             <div class="info-row">
               <span>付款方式：</span>
@@ -227,6 +268,11 @@ onMounted(() => {
 }
 
 .item-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.no-items-tip {
   font-size: 12px;
   color: var(--text-muted);
 }

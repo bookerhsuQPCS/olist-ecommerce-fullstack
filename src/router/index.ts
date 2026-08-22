@@ -14,7 +14,8 @@ const routes = [
   { path: '/cart', name: 'cart', component: CartView },
   { path: '/checkout', name: 'checkout', component: CheckoutView, meta: { requiresAuth: true } },
   { path: '/orders', name: 'orders', component: OrdersView, meta: { requiresAuth: true } },
-  { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAdmin: true } },
+  // 暫時隱藏 BI 儀表板，重導向至首頁
+  { path: '/dashboard', name: 'dashboard', redirect: '/' },
   { path: '/login', name: 'login', component: LoginView }
 ]
 
