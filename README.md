@@ -59,3 +59,5 @@
 **安裝專案所有依賴：**
 ```bash
 npm install
+
+[![Enterprise Quality Gate](https://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions/workflows/quality-gate.yml/badge.svg)](hhttps://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions)
