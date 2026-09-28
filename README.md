@@ -48,6 +48,8 @@
 
 ---
 
+[![Enterprise Quality Gate](https://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions/workflows/quality-gate.yml/badge.svg)](hhttps://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions)
+
 ## 🚀 快速開始
 
 ### 1. 環境需求
@@ -60,4 +62,3 @@
 ```bash
 npm install
 
-[![Enterprise Quality Gate](https://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions/workflows/quality-gate.yml/badge.svg)](hhttps://github.com/bookerhsuQPCS/olist-ecommerce-fullstack/actions)
